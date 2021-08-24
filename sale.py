@@ -8,6 +8,7 @@ from trytond.pyson import Eval
 from trytond.transaction import Transaction
 from trytond.modules.product import price_digits
 from trytond.modules.account_invoice_discount.invoice import discount_digits
+from trytond.modules.currency.fields import Monetary
 
 __all__ = ['Sale', 'SaleLine', 'discount_digits']
 
@@ -81,11 +82,11 @@ class Sale(metaclass=PoolMeta):
 
 class SaleLine(metaclass=PoolMeta):
     __name__ = 'sale.line'
-
-    gross_unit_price = fields.Numeric('Gross Price', digits=price_digits,
-        states=STATES, depends=['type', 'sale_state'])
-    gross_unit_price_wo_round = fields.Numeric('Gross Price without rounding',
-        digits=(16, price_digits[1] + discount_digits[1]), readonly=True)
+    gross_unit_price = Monetary('Gross Price', digits=price_digits,
+        currency='currency', states=STATES, depends=['type', 'sale_state'])
+    gross_unit_price_wo_round = Monetary('Gross Price without rounding',
+        digits=(16, price_digits[1] + discount_digits[1]), currency='currency',
+        readonly=True)
     discount = fields.Numeric('Discount', digits=discount_digits,
         states=STATES, depends=['type', 'sale_state'])
 
