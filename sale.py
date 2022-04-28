@@ -34,7 +34,7 @@ class Sale(metaclass=PoolMeta):
         if not cls.lines.context:
             cls.lines.context = {}
         cls.lines.context['sale_discount'] = Eval('sale_discount')
-        cls.lines.depends.append('sale_discount')
+        cls.lines.depends.add('sale_discount')
 
     @staticmethod
     def default_sale_discount():
