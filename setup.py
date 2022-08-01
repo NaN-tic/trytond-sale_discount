@@ -9,7 +9,7 @@ from configparser import ConfigParser
 
 MODULE = 'sale_discount'
 PREFIX = 'trytonspain'
-MODULE2PREFIX = {'account_invoice_discount': 'trytonspain'}
+MODULE2PREFIX = {'account_invoice_discount': 'nan-tic'}
 
 
 def read(fname):
