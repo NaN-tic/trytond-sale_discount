@@ -10,6 +10,9 @@ from configparser import ConfigParser
 MODULE = 'sale_discount'
 PREFIX = 'trytonspain'
 MODULE2PREFIX = {'account_invoice_discount': 'nan-tic'}
+OWNER = {
+    'nan-tic': 'NaN-tic'
+}
 
 
 def read(fname):
@@ -27,6 +30,27 @@ def get_require_version(name):
         major_version, minor_version + 1)
     return require
 
+def get_requires(depends='depends'):
+  requires = []
+  for dep in info.get(depends, []):
+      if not re.match(r'(ir|res)(\W|$)', dep):
+          prefix = MODULE2PREFIX.get(dep, 'trytond')
+          owner = OWNER.get(prefix, prefix)
+          if prefix == 'trytond':
+              requires.append(get_require_version('%s_%s' % (prefix, dep)))
+          else:
+              requires.append(
+                  '%(prefix)s-%(dep)s@git+https://github.com/%(owner)s/'
+                  'trytond-%(dep)s.git@%(branch)s'
+                  '#egg=%(prefix)s-%(dep)s-%(series)s'%{
+                          'prefix': prefix,
+                          'owner': owner,
+                          'dep':dep,
+                          'branch': branch,
+                          'series': series,})
+
+  return requires
+
 config = ConfigParser()
 config.readfp(open('tryton.cfg'))
 info = dict(config.items('tryton'))
@@ -41,35 +65,21 @@ minor_version = int(minor_version)
 
 requires = []
 
-for dep in info.get('depends', []):
-    if not re.match(r'(ir|res)(\W|$)', dep):
-        prefix = MODULE2PREFIX.get(dep, 'trytond')
-        requires.append(get_require_version('%s_%s' % (prefix, dep)))
-requires.append(get_require_version('trytond'))
-requires += [get_require_version('trytond_sale')]
-
-tests_require = [
-    get_require_version('proteus'),
-    get_require_version('trytond_sale_promotion'),
-    get_require_version('trytond_sale_shipment_cost'),
-    get_require_version('trytond_purchase_shipment_cost'),
-    
-    ]
-
 series = '%s.%s' % (major_version, minor_version)
 if minor_version % 2:
     branch = 'master'
 else:
     branch = series
 
-dependency_links = [
-   ('git+https://github.com/trytonspain/'
-       'trytond-account_invoice_discount@%(branch)s'
-       '#egg=trytonspain-account_invoice_discount-%(series)s'%{
-               'branch': branch, 
-               'series': series,}),
-]
+requires += get_requires('depends')
 
+tests_require = [
+    get_require_version('proteus'),
+
+    ]
+tests_require += get_requires('extras_depend')
+
+dependency_links = []
 if minor_version % 2:
     # Add development index for testing with proteus
     dependency_links.append('https://trydevpi.tryton.org/')
@@ -80,7 +90,7 @@ setup(name='%s_%s' % (PREFIX, MODULE),
     long_description=read('README'),
     author='trytonspain',
     url='http://www.nan-tic.com/',
-    download_url='https://github.com:trytonspain/trytond-sale_discount',
+    download_url='https://github.com/NaN-tic/trytond-sale_discount',
     package_dir={'trytond.modules.%s' % MODULE: '.'},
     packages=[
         'trytond.modules.%s' % MODULE,
