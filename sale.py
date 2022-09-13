@@ -72,9 +72,9 @@ class Sale(metaclass=PoolMeta):
         if to_write:
             Line.save(to_write)
 
-    def get_shipment_cost_line(self, cost, unit_price=None):
+    def get_shipment_cost_line(self, carrier, cost, unit_price=None):
         # add gross unit price in sale shipment cost line
-        cost_line = super(Sale, self).get_shipment_cost_line(cost, unit_price)
+        cost_line = super(Sale, self).get_shipment_cost_line(carrier, cost, unit_price)
         cost_line.gross_unit_price = cost
         cost_line.update_prices()
         return cost_line
