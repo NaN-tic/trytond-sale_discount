@@ -8,6 +8,7 @@ from trytond.pyson import Eval
 from trytond.transaction import Transaction
 from trytond.modules.product import price_digits
 from trytond.modules.account_invoice_discount.invoice import discount_digits
+from trytond.modules.product import round_price
 
 __all__ = ['Sale', 'SaleLine', 'discount_digits']
 
@@ -143,17 +144,14 @@ class SaleLine(metaclass=PoolMeta):
             elif sale_discount and sale_discount != 1:
                 gross_unit_price_wo_round = unit_price / (1 - sale_discount)
 
-            digits = self.__class__.unit_price.digits[1]
-            gup_wo_r_digits = self.__class__.gross_unit_price_wo_round.digits[1]
-            unit_price = unit_price.quantize(Decimal(str(10.0 ** -digits)))
+            unit_price = round_price(unit_price)
 
-            digits = self.__class__.gross_unit_price.digits[1]
+            gup_wo_r_digits = self.__class__.gross_unit_price_wo_round.digits[1]
             gross_unit_price_wo_round = gross_unit_price_wo_round.quantize(
                 Decimal(str(10.0 ** -gup_wo_r_digits)))
-            gross_unit_price = gross_unit_price_wo_round.quantize(
-                Decimal(str(10.0 ** -digits)))
 
-        self.gross_unit_price = gross_unit_price
+        self.gross_unit_price = (round_price(gross_unit_price_wo_round)
+            if gross_unit_price_wo_round else None)
         self.gross_unit_price_wo_round = gross_unit_price_wo_round
         if self.has_promotion:
             self.draft_unit_price = unit_price
