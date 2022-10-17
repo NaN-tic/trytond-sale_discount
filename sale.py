@@ -6,10 +6,9 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
-from trytond.modules.product import price_digits
 from trytond.modules.account_invoice_discount.invoice import discount_digits
 from trytond.modules.currency.fields import Monetary
-from trytond.modules.product import round_price
+from trytond.modules.product import price_digits, round_price
 
 __all__ = ['Sale', 'SaleLine', 'discount_digits']
 
@@ -120,11 +119,15 @@ class SaleLine(metaclass=PoolMeta):
         gross_unit_price = gross_unit_price_wo_round = self.gross_unit_price
         sale_discount = Transaction().context.get('sale_discount')
 
+        if not self.gross_unit_price:
+            return
+
         if sale_discount is None:
             if self.sale and hasattr(self.sale, 'sale_discount'):
                 sale_discount = self.sale.sale_discount or Decimal(0)
             else:
                 sale_discount = Decimal(0)
+
         if self.gross_unit_price is not None and (self.discount is not None
                 or sale_discount is not None):
             unit_price = self.gross_unit_price
@@ -150,9 +153,9 @@ class SaleLine(metaclass=PoolMeta):
             gup_wo_r_digits = self.__class__.gross_unit_price_wo_round.digits[1]
             gross_unit_price_wo_round = gross_unit_price_wo_round.quantize(
                 Decimal(str(10.0 ** -gup_wo_r_digits)))
+            gross_unit_price = gross_unit_price_wo_round
 
-        self.gross_unit_price = (round_price(gross_unit_price_wo_round)
-            if gross_unit_price_wo_round else None)
+        self.gross_unit_price = round_price(gross_unit_price)
         self.gross_unit_price_wo_round = gross_unit_price_wo_round
         if self.has_promotion:
             self.draft_unit_price = unit_price
