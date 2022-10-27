@@ -118,7 +118,7 @@ class SaleLine(metaclass=PoolMeta):
         gross_unit_price = gross_unit_price_wo_round = self.gross_unit_price
         sale_discount = Transaction().context.get('sale_discount')
 
-        if not self.gross_unit_price:
+        if self.gross_unit_price is None:
             return
 
         if sale_discount is None:
