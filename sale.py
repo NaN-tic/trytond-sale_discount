@@ -75,7 +75,7 @@ class Sale(metaclass=PoolMeta):
     def get_shipment_cost_line(self, carrier, cost, unit_price=None):
         # add gross unit price in sale shipment cost line
         cost_line = super(Sale, self).get_shipment_cost_line(carrier, cost, unit_price)
-        cost_line.gross_unit_price = cost
+        cost_line.gross_unit_price = cost_line.unit_price
         cost_line.update_prices()
         return cost_line
 
@@ -197,7 +197,8 @@ class SaleLine(metaclass=PoolMeta):
         digits = InvoiceLine.discount.digits[1]
         lines = super(SaleLine, self).get_invoice_line()
         for line in lines:
-            line.gross_unit_price = self.gross_unit_price
+            if not hasattr(line, 'gross_unit_price') or line.gross_unit_price is None:
+                line.gross_unit_price = self.gross_unit_price
             discount = Decimal(0)
             if self.discount and self.sale and self.sale.sale_discount:
                 discount = (Decimal('1.0')
