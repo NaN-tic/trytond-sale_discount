@@ -95,14 +95,6 @@ class SaleLine(metaclass=PoolMeta):
         super(SaleLine, cls).__setup__()
         cls.unit_price.states['readonly'] = True
         cls.unit_price.digits = (20, price_digits[1] + discount_digits[1])
-        if 'discount' not in cls.unit.on_change:
-            cls.unit.on_change.add('discount')
-        cls.unit.on_change.add('_parent_sale.sale_discount')
-        if 'discount' not in cls.amount.on_change_with:
-            cls.amount.on_change_with.add('discount')
-        cls.amount.on_change_with.add('_parent_sale.sale_discount')
-        if 'gross_unit_price' not in cls.amount.on_change_with:
-            cls.amount.on_change_with.add('gross_unit_price')
 
     @staticmethod
     def default_discount():
@@ -113,6 +105,14 @@ class SaleLine(metaclass=PoolMeta):
         return (hasattr(self, 'promotion')
                 and self.promotion
                 and self.draft_unit_price)
+
+    @fields.depends('gross_unit_price', 'discount')
+    def on_change_with_amount(self):
+        return super().on_change_with_amount()
+
+    @fields.depends('_parent_sale.sale_discount', 'discount')
+    def on_change_unit(self):
+        super().on_change_unit()
 
     def update_prices(self):
         unit_price = None
