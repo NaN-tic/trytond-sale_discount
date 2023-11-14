@@ -106,14 +106,8 @@ class SaleLine(metaclass=PoolMeta):
                 and self.promotion
                 and self.draft_unit_price)
 
-    @fields.depends('gross_unit_price', 'discount')
-    def on_change_with_amount(self):
-        return super().on_change_with_amount()
-
-    @fields.depends('_parent_sale.sale_discount', 'discount')
-    def on_change_unit(self):
-        super().on_change_unit()
-
+    @fields.depends('gross_unit_price', 'discount',
+        methods=['on_change_with_amount'])
     def update_prices(self):
         unit_price = None
         gross_unit_price = gross_unit_price_wo_round = self.gross_unit_price
@@ -161,34 +155,38 @@ class SaleLine(metaclass=PoolMeta):
             self.draft_unit_price = unit_price
         else:
             self.unit_price = unit_price
+        self.amount = self.on_change_with_amount()
 
-    @fields.depends('gross_unit_price', 'discount',
-        '_parent_sale.sale_discount', 'sale')
+    @fields.depends('_parent_sale.sale_discount', 'discount')
+    def on_change_unit(self):
+        super().on_change_unit()
+
+    @fields.depends(methods=['update_prices'])
     def on_change_gross_unit_price(self):
         return self.update_prices()
 
-    @fields.depends('gross_unit_price', 'discount',
-        '_parent_sale.sale_discount', 'sale')
+    @fields.depends('sale', methods=['update_prices'])
     def on_change_discount(self):
         return self.update_prices()
 
-    @fields.depends('discount', 'unit_price', '_parent_sale.sale_discount')
+    @fields.depends('discount', 'unit_price', '_parent_sale.sale_discount',
+        methods=['update_prices'])
     def on_change_product(self):
         super().on_change_product()
         self.gross_unit_price = self.unit_price
         if self.discount is None:
             self.discount = Decimal(0)
-        if self.unit_price:
+        if self.unit_price is not None:
             self.update_prices()
 
-    @fields.depends('discount', 'unit_price', '_parent_sale.sale_discount')
+    @fields.depends('discount', 'unit_price', '_parent_sale.sale_discount',
+        methods=['update_prices'])
     def on_change_quantity(self):
         super().on_change_quantity()
         self.gross_unit_price = self.unit_price
         if not self.discount:
             self.discount = Decimal(0)
-
-        if self.unit_price:
+        if self.unit_price is not None:
             self.update_prices()
 
     def get_invoice_line(self):
