@@ -58,6 +58,7 @@ class AmendmentLine(metaclass=PoolMeta):
 
     @fields.depends('gross_unit_price', 'unit_price', 'discount')
     def update_prices(self):
+        # TODO not support amendment upgrade_prices and sale_discount from sale (header)
         unit_price = None
         gross_unit_price = self.gross_unit_price
         if self.gross_unit_price is not None and self.discount is not None:
