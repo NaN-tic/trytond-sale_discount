@@ -7,8 +7,9 @@ from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
 from trytond.modules.currency.fields import Monetary
-from trytond.modules.account_invoice_discount.invoice import discount_digits
-from trytond.modules.product import price_digits, round_price
+from trytond.modules.account_invoice_discount.invoice import (gross_unit_price_digits,
+    discount_digits)
+from trytond.modules.product import round_price
 
 STATES = {
     'invisible': Eval('type') != 'line',
@@ -80,11 +81,8 @@ class Sale(metaclass=PoolMeta):
 
 class SaleLine(metaclass=PoolMeta):
     __name__ = 'sale.line'
-    gross_unit_price = Monetary('Gross Price', digits=price_digits,
+    gross_unit_price = Monetary('Gross Price', digits=gross_unit_price_digits,
         currency='currency', states=STATES, depends=['type', 'sale_state'])
-    gross_unit_price_wo_round = Monetary('Gross Price without rounding',
-        digits=(16, price_digits[1] + discount_digits[1]), currency='currency',
-        readonly=True)
     discount = fields.Numeric('Discount', digits=discount_digits,
         states=STATES, depends=['type', 'sale_state'])
 
@@ -103,11 +101,11 @@ class SaleLine(metaclass=PoolMeta):
                 and self.promotion
                 and self.draft_unit_price)
 
-    @fields.depends('gross_unit_price', 'unit_price', 'discount',
+    @fields.depends('sale', 'gross_unit_price', 'unit_price', 'discount',
         methods=['on_change_with_amount'])
     def update_prices(self):
         unit_price = None
-        gross_unit_price = gross_unit_price_wo_round = self.gross_unit_price
+        gross_unit_price = self.gross_unit_price
         sale_discount = Transaction().context.get('sale_discount')
 
         if sale_discount is None:
@@ -130,21 +128,19 @@ class SaleLine(metaclass=PoolMeta):
                 discount = (self.discount + sale_discount
                     - self.discount * sale_discount)
                 if discount != 1:
-                    gross_unit_price_wo_round = unit_price / (1 - discount)
+                    gross_unit_price = unit_price / (1 - discount)
             elif self.discount and self.discount != 1:
-                gross_unit_price_wo_round = unit_price / (1 - self.discount)
+                gross_unit_price = unit_price / (1 - self.discount)
             elif sale_discount and sale_discount != 1:
-                gross_unit_price_wo_round = unit_price / (1 - sale_discount)
+                gross_unit_price = unit_price / (1 - sale_discount)
 
             unit_price = round_price(unit_price)
 
-            gup_wo_r_digits = self.__class__.gross_unit_price_wo_round.digits[1]
-            gross_unit_price_wo_round = gross_unit_price_wo_round.quantize(
-                Decimal(str(10.0 ** -gup_wo_r_digits)))
-            gross_unit_price = round_price(gross_unit_price_wo_round)
+            gup_digits = self.__class__.gross_unit_price.digits[1]
+            gross_unit_price = gross_unit_price.quantize(
+                Decimal(str(10.0 ** -gup_digits)))
 
         self.gross_unit_price = gross_unit_price
-        self.gross_unit_price_wo_round = gross_unit_price_wo_round
         if self.has_promotion:
             self.draft_unit_price = unit_price
         else:

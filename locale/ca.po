@@ -10,10 +10,6 @@ msgctxt "field:sale.line,gross_unit_price:"
 msgid "Gross Price"
 msgstr "Preu brut"
 
-msgctxt "field:sale.line,gross_unit_price_wo_round:"
-msgid "Gross Price without rounding"
-msgstr "Preu brut sense arrodoniment"
-
 msgctxt "field:sale.sale,sale_discount:"
 msgid "Sale Discount"
 msgstr "Descompte venda"
