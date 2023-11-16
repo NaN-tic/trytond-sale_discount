@@ -6,11 +6,10 @@ from trytond.model import fields
 from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval
 from trytond.transaction import Transaction
-from trytond.modules.account_invoice_discount.invoice import discount_digits
 from trytond.modules.currency.fields import Monetary
-from trytond.modules.product import price_digits, round_price
-
-__all__ = ['Sale', 'SaleLine', 'discount_digits']
+from trytond.modules.account_invoice_discount.invoice import (gross_unit_price_digits,
+    discount_digits)
+from trytond.modules.product import round_price
 
 STATES = {
     'invisible': Eval('type') != 'line',
@@ -30,7 +29,7 @@ class Sale(metaclass=PoolMeta):
 
     @classmethod
     def __setup__(cls):
-        super(Sale, cls).__setup__()
+        super().__setup__()
         if not cls.lines.context:
             cls.lines.context = {}
         cls.lines.context['sale_discount'] = Eval('sale_discount')
@@ -46,13 +45,13 @@ class Sale(metaclass=PoolMeta):
         sales_todo = []
         for sales, _ in zip(actions, actions):
             sales_todo.extend(sales)
-        super(Sale, cls).write(*args)
+        super().write(*args)
         if Transaction().context.get('apply_discount_to_lines', True):
             cls.apply_discount_to_lines(sales_todo)
 
     @classmethod
     def create(cls, vlist):
-        sales = super(Sale, cls).create(vlist)
+        sales = super().create(vlist)
         if Transaction().context.get('apply_discount_to_lines', True):
             cls.apply_discount_to_lines(sales)
         return sales
@@ -74,7 +73,7 @@ class Sale(metaclass=PoolMeta):
 
     def get_shipment_cost_line(self, carrier, cost, unit_price=None):
         # add gross unit price in sale shipment cost line
-        cost_line = super(Sale, self).get_shipment_cost_line(carrier, cost, unit_price)
+        cost_line = super().get_shipment_cost_line(carrier, cost, unit_price)
         cost_line.gross_unit_price = cost_line.unit_price
         cost_line.update_prices()
         return cost_line
@@ -82,19 +81,15 @@ class Sale(metaclass=PoolMeta):
 
 class SaleLine(metaclass=PoolMeta):
     __name__ = 'sale.line'
-    gross_unit_price = Monetary('Gross Price', digits=price_digits,
+    gross_unit_price = Monetary('Gross Price', digits=gross_unit_price_digits,
         currency='currency', states=STATES, depends=['type', 'sale_state'])
-    gross_unit_price_wo_round = Monetary('Gross Price without rounding',
-        digits=(16, price_digits[1] + discount_digits[1]), currency='currency',
-        readonly=True)
     discount = fields.Numeric('Discount', digits=discount_digits,
         states=STATES, depends=['type', 'sale_state'])
 
     @classmethod
     def __setup__(cls):
-        super(SaleLine, cls).__setup__()
+        super().__setup__()
         cls.unit_price.states['readonly'] = True
-        cls.unit_price.digits = (20, price_digits[1] + discount_digits[1])
 
     @staticmethod
     def default_discount():
@@ -106,15 +101,12 @@ class SaleLine(metaclass=PoolMeta):
                 and self.promotion
                 and self.draft_unit_price)
 
-    @fields.depends('gross_unit_price', 'discount',
+    @fields.depends('sale', 'gross_unit_price', 'unit_price', 'discount',
         methods=['on_change_with_amount'])
     def update_prices(self):
         unit_price = None
-        gross_unit_price = gross_unit_price_wo_round = self.gross_unit_price
+        gross_unit_price = self.gross_unit_price
         sale_discount = Transaction().context.get('sale_discount')
-
-        if self.gross_unit_price is None:
-            return
 
         if sale_discount is None:
             if self.sale and hasattr(self.sale, 'sale_discount'):
@@ -136,21 +128,19 @@ class SaleLine(metaclass=PoolMeta):
                 discount = (self.discount + sale_discount
                     - self.discount * sale_discount)
                 if discount != 1:
-                    gross_unit_price_wo_round = unit_price / (1 - discount)
+                    gross_unit_price = unit_price / (1 - discount)
             elif self.discount and self.discount != 1:
-                gross_unit_price_wo_round = unit_price / (1 - self.discount)
+                gross_unit_price = unit_price / (1 - self.discount)
             elif sale_discount and sale_discount != 1:
-                gross_unit_price_wo_round = unit_price / (1 - sale_discount)
+                gross_unit_price = unit_price / (1 - sale_discount)
 
             unit_price = round_price(unit_price)
 
-            gup_wo_r_digits = self.__class__.gross_unit_price_wo_round.digits[1]
-            gross_unit_price_wo_round = gross_unit_price_wo_round.quantize(
-                Decimal(str(10.0 ** -gup_wo_r_digits)))
-            gross_unit_price = gross_unit_price_wo_round
+            gup_digits = self.__class__.gross_unit_price.digits[1]
+            gross_unit_price = gross_unit_price.quantize(
+                Decimal(str(10.0 ** -gup_digits)))
 
-        self.gross_unit_price = round_price(gross_unit_price)
-        self.gross_unit_price_wo_round = gross_unit_price_wo_round
+        self.gross_unit_price = gross_unit_price
         if self.has_promotion:
             self.draft_unit_price = unit_price
         else:
@@ -165,6 +155,12 @@ class SaleLine(metaclass=PoolMeta):
     def on_change_gross_unit_price(self):
         return self.update_prices()
 
+    @fields.depends('unit_price', methods=['update_prices'])
+    def on_change_unit_price(self):
+        # unit_price has readonly state but could set unit_price from source code
+        if self.unit_price is not None:
+            self.update_prices()
+
     @fields.depends('sale', methods=['update_prices'])
     def on_change_discount(self):
         return self.update_prices()
@@ -172,7 +168,7 @@ class SaleLine(metaclass=PoolMeta):
     @fields.depends('discount', 'unit_price', '_parent_sale.sale_discount',
         methods=['update_prices'])
     def on_change_product(self):
-        super(SaleLine, self).on_change_product()
+        super().on_change_product()
         self.gross_unit_price = self.unit_price
         if self.discount is None:
             self.discount = Decimal(0)
@@ -182,7 +178,7 @@ class SaleLine(metaclass=PoolMeta):
     @fields.depends('discount', 'unit_price', '_parent_sale.sale_discount',
         methods=['update_prices'])
     def on_change_quantity(self):
-        super(SaleLine, self).on_change_quantity()
+        super().on_change_quantity()
         self.gross_unit_price = self.unit_price
         if not self.discount:
             self.discount = Decimal(0)
@@ -193,7 +189,7 @@ class SaleLine(metaclass=PoolMeta):
         pool = Pool()
         InvoiceLine = pool.get('account.invoice.line')
         digits = InvoiceLine.discount.digits[1]
-        lines = super(SaleLine, self).get_invoice_line()
+        lines = super().get_invoice_line()
         for line in lines:
             if not hasattr(line, 'gross_unit_price') or line.gross_unit_price is None:
                 line.gross_unit_price = self.gross_unit_price
@@ -238,4 +234,4 @@ class SaleLine(metaclass=PoolMeta):
                 vals['gross_unit_price'] = gross_unit_price
             if not vals.get('discount'):
                 vals['discount'] = Decimal(0)
-        return super(SaleLine, cls).create(vlist)
+        return super().create(vlist)
