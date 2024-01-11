@@ -18,9 +18,9 @@ STATES={
 class AmendmentLine(metaclass=PoolMeta):
     __name__ = 'sale.amendment.line'
     gross_unit_price = fields.Numeric('Gross Price', digits=gross_unit_price_digits,
-        states=STATES, depends=['state', 'action'])
+        states=STATES)
     discount = fields.Numeric('Discount', digits=discount_digits,
-        states=STATES, depends=['state', 'action'])
+        states=STATES)
 
     @classmethod
     def __setup__(cls):

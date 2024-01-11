@@ -23,7 +23,7 @@ class Sale(metaclass=PoolMeta):
     sale_discount = fields.Numeric('Sale Discount',
         digits=discount_digits, states={
             'readonly': Eval('state') != 'draft',
-            }, depends=['state'],
+            },
         help='This discount will be applied in all lines after their own '
         'discount.')
 
@@ -84,7 +84,7 @@ class SaleLine(metaclass=PoolMeta):
     gross_unit_price = Monetary('Gross Price', digits=gross_unit_price_digits,
         currency='currency', states=STATES, depends=['type', 'sale_state'])
     discount = fields.Numeric('Discount', digits=discount_digits,
-        states=STATES, depends=['type', 'sale_state'])
+        states=STATES)
 
     @classmethod
     def __setup__(cls):
