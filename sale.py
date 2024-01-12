@@ -82,7 +82,7 @@ class Sale(metaclass=PoolMeta):
 class SaleLine(metaclass=PoolMeta):
     __name__ = 'sale.line'
     gross_unit_price = Monetary('Gross Price', digits=gross_unit_price_digits,
-        currency='currency', states=STATES, depends=['type', 'sale_state'])
+        currency='currency', states=STATES)
     discount = fields.Numeric('Discount', digits=discount_digits,
         states=STATES)
 
