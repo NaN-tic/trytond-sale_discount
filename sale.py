@@ -106,7 +106,7 @@ class SaleLine(metaclass=PoolMeta):
                 and self.promotion
                 and self.draft_unit_price)
 
-    @fields.depends('gross_unit_price', 'discount',
+    @fields.depends('sale', 'gross_unit_price', 'discount',
         methods=['on_change_with_amount'])
     def update_prices(self):
         unit_price = None
