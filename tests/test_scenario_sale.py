@@ -144,7 +144,13 @@ class Test(unittest.TestCase):
         sale_line.quantity = 2.0
         self.assertEqual(sale_line.amount, Decimal('17.60'))
         sale_line = sale.lines.new()
+        sale_line.discount = Decimal('0.5')
+        sale_line.gross_unit_price = Decimal('1')
+        self.assertEqual(sale_line.unit_price, Decimal('0.5'))
         sale_line.type = 'comment'
+        self.assertEqual(sale_line.discount, None)
+        self.assertEqual(sale_line.gross_unit_price, None)
+        self.assertEqual(sale_line.unit_price, None)
         sale_line.description = 'Comment'
         sale_line = sale.lines.new()
         sale_line.product = product
