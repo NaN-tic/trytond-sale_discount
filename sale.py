@@ -185,6 +185,12 @@ class SaleLine(metaclass=PoolMeta):
         if self.unit_price is not None:
             self.update_prices()
 
+    @fields.depends('type', 'taxes')
+    def on_change_type(self):
+        if self.type != 'line':
+            self.gross_unit_price = None
+        super(SaleLine, self).on_change_type()
+
     def get_invoice_line(self):
         pool = Pool()
         InvoiceLine = pool.get('account.invoice.line')
